@@ -1,0 +1,21 @@
+OrdererOrgs:
+  - Name: Orderer
+    Domain: github.com
+    Specs:
+      - Hostname: orderer
+
+PeerOrgs:
+  - Name: Org1
+    Domain: org1.github.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2 # Count: The number of peers
+    Users:
+      Count: 1 # Count: The number of user accounts _in addition_ to Admin
+  - Name: Org2
+    Domain: org2.github.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2
+    Users:
+      Count: 1
