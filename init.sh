@@ -132,9 +132,9 @@ pullDockerImages() {
     fi
 }
 
-DOCKER=false
+DOCKER=true
 SAMPLES=false
-BINARIES=true
+BINARIES=false
 
 # Parse commandline args pull out
 # version and/or ca-version strings first
