@@ -14,8 +14,6 @@ const (
 	US
 )
 
-type IngredientsExchangeCC struct{}
-
 type Stock struct {
 	Uid    string `json:"stock_uid"`
 	Name   string `json:"stock_name"`
@@ -25,13 +23,27 @@ type Stock struct {
 	Price  float64 `json:"stock_price"`
 }
 
+func NewStock(uid, name, date string, Type uint8,amount uint64,price float64)*Stock{
+	return &Stock{
+		Uid:    uid,
+		Name:   name,
+		Date:   date,
+		Type:   Type,
+		Amount: amount,
+		Price:  price,
+	}
+}
+
+type stocksCC struct{}
+
 //IPO（首次公开募股）
-func (c *IngredientsExchangeCC) IPO(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (c *stocksCC) IPO(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	//检查参数的个数
 	if len(args) != 6 {
 		return shim.Error("Missing required args(uid, name, date, type, amount, price)")
 	}
-	//
+
+	//检查参数类型
 	uid := args[0]
 	name := args[1]
 	date := args[2]
@@ -48,31 +60,23 @@ func (c *IngredientsExchangeCC) IPO(stub shim.ChaincodeStubInterface, args []str
 		return shim.Error("price err")
 	}
 
-
-	//验证数据是否存在
+	//查看股票信息是否存在
 	stockTemp , err := stub.GetState(uid)
 	if err != nil {
-		return shim.Error("query err")
+		return shim.Error("query err:"+err.Error())
 	}
 	if stockTemp != nil{
 		return shim.Error("stock exists")
 	}
 
-	//写入状态
-	stock := &Stock{
-		Uid:    uid,
-		Name:   name,
-		Date:   date,
-		Type:   uint8(Type),
-		Amount: amount,
-		Price:  price,
-	}
-
+	//构造股票实例
+	stock := NewStock(uid,name,date,uint8(Type),amount,price)
 	stockBytes, err := json.Marshal(stock)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("marshal stock error: %s", err))
 	}
 
+	//增加股票
 	err = stub.PutState(uid, stockBytes)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("save stock error: %s", err))
@@ -81,13 +85,14 @@ func (c *IngredientsExchangeCC) IPO(stub shim.ChaincodeStubInterface, args []str
 	return shim.Success(nil)
 }
 
-//Update（首次公开募股）
-func (c *IngredientsExchangeCC) Update(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+//Update（修改股票信息）
+func (c *stocksCC) Update(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	//检查参数的个数
 	if len(args) != 6 {
 		return shim.Error("Missing required args(uid, name, date, type, amount, price)")
 	}
-	//
+
+	//检查参数类型
 	uid := args[0]
 	name := args[1]
 	date := args[2]
@@ -104,31 +109,23 @@ func (c *IngredientsExchangeCC) Update(stub shim.ChaincodeStubInterface, args []
 		return shim.Error("price err")
 	}
 
-
-	//验证数据是否存在
+	//查看股票信息是否存在
 	stockTemp , err := stub.GetState(uid)
 	if err != nil {
-		return shim.Error("query err")
+		return shim.Error("query err"+err.Error())
 	}
 	if stockTemp == nil{
 		return shim.Error("stock not exists")
 	}
 
-	//写入状态
-	stock := &Stock{
-		Uid:    uid,
-		Name:   name,
-		Date:   date,
-		Type:   uint8(Type),
-		Amount: amount,
-		Price:  price,
-	}
-
+	//构造股票实例
+	stock := NewStock(uid,name,date,uint8(Type),amount,price)
 	stockBytes, err := json.Marshal(stock)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("marshal stock error: %s", err))
 	}
 
+	//更新股票
 	err = stub.PutState(uid, stockBytes)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("save stock error: %s", err))
@@ -138,12 +135,11 @@ func (c *IngredientsExchangeCC) Update(stub shim.ChaincodeStubInterface, args []
 }
 
 
-//查询
-func (c *IngredientsExchangeCC) Query(stub shim.ChaincodeStubInterface, uid string) pb.Response {
-
+//查询股票信息
+func (c *stocksCC) Query(stub shim.ChaincodeStubInterface, uid string) pb.Response {
 	stockBytes, err := stub.GetState(uid)
 	if err != nil {
-		return shim.Error("query err")
+		return shim.Error("query err:"+err.Error())
 	}
 	if stockBytes == nil{
 		return shim.Error("stock not exists")
@@ -151,12 +147,22 @@ func (c *IngredientsExchangeCC) Query(stub shim.ChaincodeStubInterface, uid stri
 	return shim.Success(stockBytes)
 }
 
-func (c *IngredientsExchangeCC) Init(stub shim.ChaincodeStubInterface) pb.Response {
+//删除股票
+func (c *stocksCC) Delete(stub shim.ChaincodeStubInterface, uid string) pb.Response {
+	err := stub.DelState(uid)
+	if err != nil {
+		return shim.Error("delete err:"+err.Error())
+	}
+	return shim.Success(nil)
+}
+
+//
+func (c *stocksCC) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Success(nil)
 }
 
 
-func (c *IngredientsExchangeCC) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
+func (c *stocksCC) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	funcName, args := stub.GetFunctionAndParameters()
 	switch funcName {
 	case "IPO":
@@ -165,6 +171,8 @@ func (c *IngredientsExchangeCC) Invoke(stub shim.ChaincodeStubInterface) pb.Resp
 		return c.Update(stub, args)
 	case "Query":
 		return c.Query(stub, args[0])
+	case "Delete":
+		return c.Delete(stub,args[0])
 	default:
 		return shim.Error(fmt.Sprintf("unsupported function: %s", funcName))
 	}
@@ -172,7 +180,7 @@ func (c *IngredientsExchangeCC) Invoke(stub shim.ChaincodeStubInterface) pb.Resp
 }
 
 func main() {
-	err := shim.Start(new(IngredientsExchangeCC))
+	err := shim.Start(new(stocksCC))
 	if err != nil {
 		fmt.Printf("Error starting AssertsExchange chaincode: %s", err)
 	}
