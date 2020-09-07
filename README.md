@@ -1,2 +1,2 @@
 # stocks-blockchain
-a stocks-blockchain based on hyperledger/fabric
+a stocks-blockchain demo based on hyperledger/fabric
